@@ -11,25 +11,26 @@
 </head>
 
 <body>
-    <nav class = "navbar">
-        <h2 class = "navbarHeader">Picker Wheel</h2>
+    <nav class="navbar">
+        <h2 class="navbarHeader">Picker Wheel</h2>
     </nav>
     <main>
-    <div class="bigContainer">
-        <div class="container">
-            <canvas id="wheelCanvas" width="600" height="600"></canvas>
-            <button class="spinWheel">SPIN</button>
-            <div class="triangle"></div>
-        </div>
-        <div class="addedInput">
-            <div class="inputName">Inputs</div>
-            <div class="input">
-                <input type="add" placeholder="Enter a name" class="nameInput">
-                <button class="addBtn">Add</button>
+        <div class="bigContainer">
+            <div class="container">
+                <canvas id="wheelCanvas" width="600" height="600"></canvas>
+                <button class="spinWheel">SPIN</button>
+                <div class="triangle"></div>
             </div>
-            <div class="inputArea"></div>
+            <div class="addedInput">
+                <div class="inputName">Inputs</div>
+                <div class="input">
+                    <input type="add" placeholder="Enter a name" class="nameInput">
+                    <button class="addBtn">Add</button>
+                </div>
+                <div class="inputArea"></div>
+            </div>
         </div>
-    </div>
+    </main>
     <div class="resultContainer" style="visibility: hidden">
         <div id="result">
             <div class="resultHeader">
@@ -40,7 +41,7 @@
             <button class="done">Done</button>
         </div>
     </div>
-</main>
+
     <script src="script.js"></script>
 </body>
 
