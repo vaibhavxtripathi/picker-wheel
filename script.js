@@ -139,6 +139,53 @@ spinWheelButton.addEventListener('click', () => {
   spin();
 });
 
+// Spin the wheel with Ctrl + Enter
+document.body.addEventListener('keypress', (event) => {
+  console.log(event)
+  if (event.key = 'Enter' && event.ctrlKey === true)
+  {if (isSpinning || segments.length === 0) return;
+
+  isSpinning = true;
+  spinAngle = Math.random() * 2000 + 1000; // Random spin angle
+  const spinDuration = 3000; // Spin duration in ms
+
+  const startTime = Date.now();
+
+  const spin = () => {
+    const elapsed = Date.now() - startTime;
+    const progress = elapsed / spinDuration;
+
+    if (progress < 1) {
+      startAngle += (spinAngle * (1 - progress ** 2)) / spinDuration;
+      drawWheel();
+      requestAnimationFrame(spin);
+    } else {
+      isSpinning = false;
+      getResult();
+      resultDiv.style.visibility = "visible";
+      document.querySelector("body").classList.add('afterResult');
+      doneBtn.addEventListener("click", () => {
+        resultDiv.style.visibility = "hidden";
+        document.querySelector("body").classList.remove('afterResult');
+      })
+
+    }
+  };
+
+  spin();}
+});
+
+//Hover the Ctrl+Button element
+spinWheelButton.addEventListener("mouseover", ()=>{
+  const ctrlEnterPara = document.querySelector('.ctrlMsg p')
+  ctrlEnterPara.style.visibility = 'visible';
+})
+//Remove the Ctrl+Button element
+spinWheelButton.addEventListener("mouseout", ()=>{
+  const ctrlEnterPara = document.querySelector('.ctrlMsg p')
+  ctrlEnterPara.style.visibility = 'hidden';
+})
+
 // Calculate the result based on the wheel position
 function getResult() {
   const arcSize = (2 * Math.PI) / segments.length;
