@@ -18,8 +18,20 @@
         <div class="bigContainer">
             <div class="container">
                 <canvas id="wheelCanvas" width="600" height="600"></canvas>
-                <button class="spinWheel">SPIN</button>
-                <div class="triangle"></div>
+                <!-- <button class="spinWheel">SPIN</button> -->
+                <svg width="0" height="0">
+                    <defs>
+                        <clipPath id="drop-shape" clipPathUnits="objectBoundingBox">
+                            <path d="
+                            M 0.25 0 C 0.34 0.09 0.5 0.2 0.5 0.34 A 0.25 0.25 90 1 1 0 0.34 C 0 0.2 0.16 0.09 0.25 0 Z
+                            " />
+                          </clipPath>
+                    </defs>
+                  </svg>
+                  
+                  <button class="spinWheel">SPIN
+                  </button>
+                  
                 <div class="ctrlMsg">
                     <p>or press Ctrl+Enter</p>
                 </div>

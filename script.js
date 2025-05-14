@@ -9,12 +9,38 @@ const doneBtn = document.querySelector('.done');
 const inputName = document.querySelector('.inputName');
 
 
-let segments = [];
+let segments = ["YES", "NO", "YES", "NO", "YES", "NO", "YES", "NO","YES", "NO"];
+let defaultSegmentsActive = true;
 let startAngle = 0;
 let spinAngle = 0;
 let isSpinning = false;
 
 const ctx = wheelCanvas.getContext('2d');
+
+// Lighter, eye-friendly color palette (4 colors)
+const segmentColors = [
+  '#FFE082', // Light Yellow
+  '#B3E5FC', // Light Blue
+  '#C8E6C9', // Light Green
+  '#FFCCBC', // Light Peach
+];
+
+// Set initial canvas size
+function setCanvasSize() {
+    const container = wheelCanvas.parentElement;
+    const size = Math.min(container.clientWidth, 600);
+    wheelCanvas.width = size;
+    wheelCanvas.height = size;
+    drawWheel(); // Redraw wheel after resize
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    setCanvasSize();
+});
+
+// Initial setup
+setCanvasSize();
 
 // Add value to list
 // Add value to list
@@ -33,8 +59,7 @@ function addValue(name) {
   oneInput.appendChild(delVal);
 
   delVal.addEventListener('click', () => {
-    oneInput.removeChild(newH2);
-    oneInput.removeChild(delVal);
+    inputArea.removeChild(oneInput);
     popVal(name); // Use the name to identify the segment
     drawWheel();
   });
@@ -46,7 +71,7 @@ function popVal(name) {
   if (index > -1) {
     segments.splice(index, 1); // Remove the correct segment
     console.log(segments);
-    inputName.innerHTML = `Inputs <span>[${segments.length}]</span>`;
+    updateInputHeader();
   }
 }
 
@@ -54,55 +79,76 @@ function popVal(name) {
 addNameButton.addEventListener('click', () => {
   const name = nameInput.value.trim();
   if (name) {
+    // On first user input, clear default segments and input area
+    if (defaultSegmentsActive) {
+      segments = [];
+      inputArea.innerHTML = '';
+      defaultSegmentsActive = false;
+    }
     segments.push(name);
     addValue(name); // Pass the name to addValue
     nameInput.value = '';
     drawWheel();
-    inputName.innerHTML = `Inputs <span>[${segments.length}]</span>`;
+    updateInputHeader();
   }
 });
 
 nameInput.addEventListener('keypress', (e) => {
   const name = nameInput.value.trim();
   if (e.key === 'Enter' && name) {
+    // On first user input, clear default segments and input area
+    if (defaultSegmentsActive) {
+      segments = [];
+      inputArea.innerHTML = '';
+      defaultSegmentsActive = false;
+    }
     segments.push(name);
     const index = segments.indexOf(name);
     addValue(name, index);
     nameInput.value = '';
     drawWheel();
-    inputName.innerHTML = `Inputs <span>[${segments.length}]</span>`
+    updateInputHeader();
   }
 });
 
 // Draw the wheel with current segments
 function drawWheel() {
-  const radius = wheelCanvas.width / 2;
-  const arcSize = (2 * Math.PI) / segments.length;
+    const radius = wheelCanvas.width / 2;
+    const arcSize = (2 * Math.PI) / segments.length;
 
-  ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+    ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
-  segments.forEach((segment, index) => {
-    const angle = startAngle + index * arcSize;
-    ctx.fillStyle = index % 2 === 0 ? '#ffcccb' : '#add8e6';
+    segments.forEach((segment, index) => {
+        const angle = startAngle + index * arcSize;
+        ctx.fillStyle = segmentColors[index % segmentColors.length];
 
-    ctx.beginPath();
-    ctx.moveTo(radius, radius);
-    ctx.arc(radius, radius, radius, angle, angle + arcSize);
-    ctx.closePath();
-    ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, angle, angle + arcSize);
+        ctx.closePath();
+        ctx.fill();
 
-    ctx.fillStyle = '#000';
-    ctx.font = '30px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.save();
-    ctx.translate(
-      radius + Math.cos(angle + arcSize / 2) * (radius * 0.7),
-      radius + Math.sin(angle + arcSize / 2) * (radius * 0.7)
-    );
-    ctx.rotate(angle + arcSize / 2 + Math.PI / 2);
-    ctx.fillText(segment, 0, 0);
-    ctx.restore();
-  });
+        // Adjust font size based on canvas size
+        const fontSize = Math.max(16, Math.min(30, radius / 10));
+        ctx.fillStyle = '#000';
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.save();
+        ctx.translate(
+            radius + Math.cos(angle + arcSize / 2) * (radius * 0.7),
+            radius + Math.sin(angle + arcSize / 2) * (radius * 0.7)
+        );
+        ctx.rotate(angle + arcSize / 2 + Math.PI / 2);
+        
+        // Truncate text if too long
+        const maxLength = Math.floor(radius / (fontSize * 0.6));
+        const displayText = segment.length > maxLength ? 
+            segment.substring(0, maxLength - 3) + '...' : 
+            segment;
+            
+        ctx.fillText(displayText, 0, 0);
+        ctx.restore();
+    });
 }
 
 // Spin the wheel
@@ -203,4 +249,38 @@ function getResult() {
   const finalIndex = selectedIndex === segments.length ? 0 : selectedIndex;
 
   resultH1.textContent = `Result: ${segments[finalIndex]}`;
+}
+
+// On page load, draw the default wheel (input area remains empty)
+drawWheel();
+
+// Add Clear All button to input header
+function addClearAllButton() {
+  let header = document.querySelector('.inputName');
+  let clearBtn = document.querySelector('.clearAllBtn');
+  if (!clearBtn) {
+    clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Clear All';
+    clearBtn.className = 'clearAllBtn';
+    clearBtn.style.marginLeft = '10px';
+    header.appendChild(clearBtn);
+  }
+  clearBtn.onclick = () => {
+    // Reset segments to default YES/NO
+    segments = ["YES", "NO", "YES", "NO", "YES", "NO", "YES", "NO", "YES", "NO"];
+    defaultSegmentsActive = true;
+    inputArea.innerHTML = '';
+    drawWheel();
+    inputName.innerHTML = `Inputs`;
+    addClearAllButton();
+  };
+}
+
+// Call this on page load
+addClearAllButton();
+
+// Ensure Clear All button is always present after adding/removing inputs
+function updateInputHeader() {
+  inputName.innerHTML = `Inputs`;
+  addClearAllButton();
 }
