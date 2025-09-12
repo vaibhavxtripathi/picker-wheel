@@ -162,13 +162,39 @@ function drawWheel() {
   });
 }
 
+// Generate cryptographically secure random number
+function getSecureRandom() {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] / (0xffffffff + 1);
+}
+
+// Generate random number with better distribution
+function getRandomRange(min, max) {
+  return min + getSecureRandom() * (max - min);
+}
+
 // Spin the wheel
 spinWheelButton.addEventListener("click", () => {
   if (isSpinning || segments.length === 0) return;
 
   isSpinning = true;
-  spinAngle = Math.random() * 2000 + 1000; // Random spin angle
-  const spinDuration = 3000; // Spin duration in ms
+
+  // Much larger random spin angle (5-15 full rotations + random offset)
+  const baseRotations = getRandomRange(5, 15);
+  const randomOffset = getRandomRange(0, 360);
+  spinAngle = baseRotations * 360 + randomOffset;
+
+  // Random spin duration between 2-5 seconds
+  const spinDuration = getRandomRange(2000, 5000);
+
+  // Random easing function selection
+  const easingTypes = ["easeOut", "easeInOut", "bounce", "elastic"];
+  const selectedEasing =
+    easingTypes[Math.floor(getSecureRandom() * easingTypes.length)];
+
+  // Add micro-randomness to make each spin feel unique
+  const microRandomness = getRandomRange(0.8, 1.2);
 
   const startTime = Date.now();
 
@@ -177,7 +203,40 @@ spinWheelButton.addEventListener("click", () => {
     const progress = elapsed / spinDuration;
 
     if (progress < 1) {
-      startAngle += (spinAngle * (1 - progress ** 2)) / spinDuration;
+      let easingProgress;
+
+      // Apply different easing functions for variety
+      switch (selectedEasing) {
+        case "easeOut":
+          easingProgress = 1 - Math.pow(1 - progress, 3);
+          break;
+        case "easeInOut":
+          easingProgress =
+            progress < 0.5
+              ? 4 * progress * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+          break;
+        case "bounce":
+          easingProgress =
+            progress < 0.5
+              ? 4 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          break;
+        case "elastic":
+          easingProgress =
+            progress === 0
+              ? 0
+              : progress === 1
+              ? 1
+              : Math.pow(2, -10 * progress) *
+                  Math.sin(((progress * 10 - 0.75) * (2 * Math.PI)) / 3) +
+                1;
+          break;
+        default:
+          easingProgress = 1 - Math.pow(1 - progress, 2);
+      }
+
+      startAngle += (spinAngle * easingProgress) / spinDuration;
       drawWheel();
       requestAnimationFrame(spin);
     } else {
@@ -202,8 +261,22 @@ document.body.addEventListener("keypress", (event) => {
     if (isSpinning || segments.length === 0) return;
 
     isSpinning = true;
-    spinAngle = Math.random() * 2000 + 1000; // Random spin angle
-    const spinDuration = 3000; // Spin duration in ms
+
+    // Much larger random spin angle (5-15 full rotations + random offset)
+    const baseRotations = getRandomRange(5, 15);
+    const randomOffset = getRandomRange(0, 360);
+    spinAngle = baseRotations * 360 + randomOffset;
+
+    // Random spin duration between 2-5 seconds
+    const spinDuration = getRandomRange(2000, 5000);
+
+    // Random easing function selection
+    const easingTypes = ["easeOut", "easeInOut", "bounce", "elastic"];
+    const selectedEasing =
+      easingTypes[Math.floor(getSecureRandom() * easingTypes.length)];
+
+    // Add micro-randomness to make each spin feel unique
+    const microRandomness = getRandomRange(0.8, 1.2);
 
     const startTime = Date.now();
 
@@ -212,7 +285,41 @@ document.body.addEventListener("keypress", (event) => {
       const progress = elapsed / spinDuration;
 
       if (progress < 1) {
-        startAngle += (spinAngle * (1 - progress ** 2)) / spinDuration;
+        let easingProgress;
+
+        // Apply different easing functions for variety
+        switch (selectedEasing) {
+          case "easeOut":
+            easingProgress = 1 - Math.pow(1 - progress, 3);
+            break;
+          case "easeInOut":
+            easingProgress =
+              progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            break;
+          case "bounce":
+            easingProgress =
+              progress < 0.5
+                ? 4 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            break;
+          case "elastic":
+            easingProgress =
+              progress === 0
+                ? 0
+                : progress === 1
+                ? 1
+                : Math.pow(2, -10 * progress) *
+                    Math.sin(((progress * 10 - 0.75) * (2 * Math.PI)) / 3) +
+                  1;
+            break;
+          default:
+            easingProgress = 1 - Math.pow(1 - progress, 2);
+        }
+
+        startAngle +=
+          (spinAngle * easingProgress * microRandomness) / spinDuration;
         drawWheel();
         requestAnimationFrame(spin);
       } else {
