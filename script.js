@@ -174,107 +174,76 @@ function getRandomRange(min, max) {
   return min + getSecureRandom() * (max - min);
 }
 
-// Spin the wheel
+// Realistic spinning wheel physics
 spinWheelButton.addEventListener("click", () => {
   if (isSpinning || segments.length === 0) return;
 
   isSpinning = true;
 
-  // Calculate target angle for precise landing
-  const arcSize = (2 * Math.PI) / segments.length;
-  const targetSegmentIndex = Math.floor(getSecureRandom() * segments.length);
+  // Real physics parameters
+  const wheelMass = 1.0; // kg (virtual mass)
+  const wheelRadius = 0.3; // meters (virtual radius)
+  const momentOfInertia = 0.5 * wheelMass * wheelRadius * wheelRadius; // I = 0.5 * m * r²
 
-  // Calculate the center of the target segment (not the boundary)
-  const targetAngle = targetSegmentIndex * arcSize + arcSize / 2;
+  // Random initial conditions
+  const initialAngularVelocity = getRandomRange(15, 25); // rad/s
+  const airResistance = getRandomRange(0.02, 0.05); // air resistance coefficient
+  const surfaceFriction = getRandomRange(0.001, 0.003); // surface friction coefficient
+  const bearingFriction = getRandomRange(0.0005, 0.0015); // bearing friction coefficient
 
-  // Add multiple full rotations (5-15) plus the target angle
-  const baseRotations = getRandomRange(5, 15);
-  const totalTargetAngle = baseRotations * 2 * Math.PI + targetAngle;
+  // Physics state
+  let angularVelocity = initialAngularVelocity; // rad/s
+  let angularPosition = 0; // radians
+  let time = 0; // seconds
+  const deltaTime = 1 / 60; // 60 FPS
 
-  // Physics-based parameters
-  const initialVelocity = getRandomRange(8, 15); // Initial angular velocity (radians/frame)
-  const baseFriction = getRandomRange(0.95, 0.98); // Base friction coefficient
-  const minVelocity = 0.005; // Lower minimum velocity for smoother stopping
-  const finalPhaseThreshold = 0.1; // When to enter final smooth phase
-
-  let currentVelocity = initialVelocity;
-  let totalRotation = 0;
-  let frameCount = 0;
-  let inFinalPhase = false;
-  const startTime = Date.now();
+  // Random perturbations (air currents, surface imperfections)
+  const perturbationFrequency = getRandomRange(0.5, 2.0); // Hz
+  const perturbationAmplitude = getRandomRange(0.1, 0.3); // rad/s
 
   const spin = () => {
-    const elapsed = Date.now() - startTime;
-    frameCount++;
+    // Calculate total friction (increases with velocity squared for air resistance)
+    const airDrag = airResistance * angularVelocity * Math.abs(angularVelocity);
+    const surfaceDrag = surfaceFriction * angularVelocity;
+    const bearingDrag = bearingFriction * angularVelocity;
+    const totalFriction = airDrag + surfaceDrag + bearingDrag;
 
-    // Check if we should enter the final smooth phase
-    if (!inFinalPhase && currentVelocity < finalPhaseThreshold) {
-      inFinalPhase = true;
-      // Calculate remaining angle to target
-      const remainingAngle = (totalTargetAngle - totalRotation) % (2 * Math.PI);
-      const adjustedRemainingAngle =
-        remainingAngle < 0 ? remainingAngle + 2 * Math.PI : remainingAngle;
+    // Add random perturbations (air currents, surface bumps)
+    const perturbation =
+      Math.sin(time * perturbationFrequency * 2 * Math.PI) *
+      perturbationAmplitude *
+      getRandomRange(0.8, 1.2);
 
-      // Set a very slow velocity to approach the target smoothly
-      currentVelocity = Math.min(adjustedRemainingAngle * 0.1, 0.05);
+    // Apply physics: F = ma, so a = F/m, but for rotation: τ = Iα, so α = τ/I
+    const angularAcceleration =
+      -(totalFriction + perturbation) / momentOfInertia;
+
+    // Update physics
+    angularVelocity += angularAcceleration * deltaTime;
+    angularPosition += angularVelocity * deltaTime;
+    time += deltaTime;
+
+    // Update visual position
+    startAngle = angularPosition;
+
+    // Check if wheel has stopped (very low velocity)
+    if (Math.abs(angularVelocity) < 0.01) {
+      // Wheel has stopped - calculate which segment the pointer is on
+      drawWheel();
+      isSpinning = false;
+
+      // Small delay to show the final position before revealing result
+      setTimeout(() => {
+        getResult();
+        resultDiv.style.visibility = "visible";
+        document.querySelector("body").classList.add("afterResult");
+        doneBtn.addEventListener("click", () => {
+          resultDiv.style.visibility = "hidden";
+          document.querySelector("body").classList.remove("afterResult");
+        });
+      }, 300);
+      return;
     }
-
-    // Variable friction - increases as wheel slows down (more realistic)
-    const velocityFactor = Math.max(0.1, currentVelocity / initialVelocity);
-    let dynamicFriction;
-
-    if (inFinalPhase) {
-      // In final phase, use much higher friction for smooth approach
-      dynamicFriction = 0.85 + (1 - velocityFactor) * 0.1;
-    } else {
-      // Normal phase friction
-      dynamicFriction =
-        baseFriction + (1 - baseFriction) * (1 - velocityFactor) * 0.3;
-    }
-
-    // Apply friction to gradually slow down
-    currentVelocity *= dynamicFriction;
-
-    // Add slight randomness to make it feel more organic (only in normal phase)
-    if (!inFinalPhase && frameCount % 3 === 0) {
-      currentVelocity *= getRandomRange(0.99, 1.01);
-    }
-
-    // Stop when velocity is very low
-    if (currentVelocity < minVelocity) {
-      // Smoothly approach the final position instead of snapping
-      const finalAngle = totalTargetAngle;
-      const angleDiff = (finalAngle - totalRotation) % (2 * Math.PI);
-      const adjustedAngleDiff = angleDiff < 0 ? angleDiff + 2 * Math.PI : angleDiff;
-      
-        // If we're very close, just snap to avoid infinite micro-movements
-        if (adjustedAngleDiff < 0.01) {
-          // Ensure we snap to the exact target angle
-          startAngle = finalAngle;
-          totalRotation = finalAngle; // Keep totalRotation in sync
-          drawWheel();
-          isSpinning = false;
-
-          // Small delay to show the final position before revealing result
-          setTimeout(() => {
-            getResult();
-            resultDiv.style.visibility = "visible";
-            document.querySelector("body").classList.add("afterResult");
-            doneBtn.addEventListener("click", () => {
-              resultDiv.style.visibility = "hidden";
-              document.querySelector("body").classList.remove("afterResult");
-            });
-          }, 200);
-          return;
-      } else {
-        // Continue with very slow movement to the exact target
-        currentVelocity = Math.min(adjustedAngleDiff * 0.05, 0.01);
-      }
-    }
-
-    // Add current velocity to rotation
-    totalRotation += currentVelocity;
-    startAngle = totalRotation;
 
     drawWheel();
     requestAnimationFrame(spin);
@@ -283,7 +252,7 @@ spinWheelButton.addEventListener("click", () => {
   spin();
 });
 
-// Spin the wheel with Ctrl + Enter
+// Spin the wheel with Ctrl + Enter (same realistic physics)
 document.body.addEventListener("keypress", (event) => {
   console.log(event);
   if ((event.key = "Enter" && event.ctrlKey === true)) {
@@ -291,102 +260,71 @@ document.body.addEventListener("keypress", (event) => {
 
     isSpinning = true;
 
-    // Calculate target angle for precise landing
-    const arcSize = (2 * Math.PI) / segments.length;
-    const targetSegmentIndex = Math.floor(getSecureRandom() * segments.length);
+    // Real physics parameters
+    const wheelMass = 1.0; // kg (virtual mass)
+    const wheelRadius = 0.3; // meters (virtual radius)
+    const momentOfInertia = 0.5 * wheelMass * wheelRadius * wheelRadius; // I = 0.5 * m * r²
 
-    // Calculate the center of the target segment (not the boundary)
-    const targetAngle = targetSegmentIndex * arcSize + arcSize / 2;
+    // Random initial conditions
+    const initialAngularVelocity = getRandomRange(15, 25); // rad/s
+    const airResistance = getRandomRange(0.02, 0.05); // air resistance coefficient
+    const surfaceFriction = getRandomRange(0.001, 0.003); // surface friction coefficient
+    const bearingFriction = getRandomRange(0.0005, 0.0015); // bearing friction coefficient
 
-    // Add multiple full rotations (5-15) plus the target angle
-    const baseRotations = getRandomRange(5, 15);
-    const totalTargetAngle = baseRotations * 2 * Math.PI + targetAngle;
+    // Physics state
+    let angularVelocity = initialAngularVelocity; // rad/s
+    let angularPosition = 0; // radians
+    let time = 0; // seconds
+    const deltaTime = 1 / 60; // 60 FPS
 
-    // Physics-based parameters
-    const initialVelocity = getRandomRange(8, 15); // Initial angular velocity (radians/frame)
-    const baseFriction = getRandomRange(0.95, 0.98); // Base friction coefficient
-    const minVelocity = 0.005; // Lower minimum velocity for smoother stopping
-    const finalPhaseThreshold = 0.1; // When to enter final smooth phase
-
-    let currentVelocity = initialVelocity;
-    let totalRotation = 0;
-    let frameCount = 0;
-    let inFinalPhase = false;
-    const startTime = Date.now();
+    // Random perturbations (air currents, surface imperfections)
+    const perturbationFrequency = getRandomRange(0.5, 2.0); // Hz
+    const perturbationAmplitude = getRandomRange(0.1, 0.3); // rad/s
 
     const spin = () => {
-      const elapsed = Date.now() - startTime;
-      frameCount++;
+      // Calculate total friction (increases with velocity squared for air resistance)
+      const airDrag =
+        airResistance * angularVelocity * Math.abs(angularVelocity);
+      const surfaceDrag = surfaceFriction * angularVelocity;
+      const bearingDrag = bearingFriction * angularVelocity;
+      const totalFriction = airDrag + surfaceDrag + bearingDrag;
 
-      // Check if we should enter the final smooth phase
-      if (!inFinalPhase && currentVelocity < finalPhaseThreshold) {
-        inFinalPhase = true;
-        // Calculate remaining angle to target
-        const remainingAngle =
-          (totalTargetAngle - totalRotation) % (2 * Math.PI);
-        const adjustedRemainingAngle =
-          remainingAngle < 0 ? remainingAngle + 2 * Math.PI : remainingAngle;
+      // Add random perturbations (air currents, surface bumps)
+      const perturbation =
+        Math.sin(time * perturbationFrequency * 2 * Math.PI) *
+        perturbationAmplitude *
+        getRandomRange(0.8, 1.2);
 
-        // Set a very slow velocity to approach the target smoothly
-        currentVelocity = Math.min(adjustedRemainingAngle * 0.1, 0.05);
+      // Apply physics: F = ma, so a = F/m, but for rotation: τ = Iα, so α = τ/I
+      const angularAcceleration =
+        -(totalFriction + perturbation) / momentOfInertia;
+
+      // Update physics
+      angularVelocity += angularAcceleration * deltaTime;
+      angularPosition += angularVelocity * deltaTime;
+      time += deltaTime;
+
+      // Update visual position
+      startAngle = angularPosition;
+
+      // Check if wheel has stopped (very low velocity)
+      if (Math.abs(angularVelocity) < 0.01) {
+        // Wheel has stopped - calculate which segment the pointer is on
+        drawWheel();
+        isSpinning = false;
+
+        // Small delay to show the final position before revealing result
+        setTimeout(() => {
+          getResult();
+          resultDiv.style.visibility = "visible";
+          document.querySelector("body").classList.add("afterResult");
+          doneBtn.addEventListener("click", () => {
+            resultDiv.style.visibility = "hidden";
+            document.querySelector("body").classList.remove("afterResult");
+          });
+        }, 300);
+        return;
       }
-
-      // Variable friction - increases as wheel slows down (more realistic)
-      const velocityFactor = Math.max(0.1, currentVelocity / initialVelocity);
-      let dynamicFriction;
-
-      if (inFinalPhase) {
-        // In final phase, use much higher friction for smooth approach
-        dynamicFriction = 0.85 + (1 - velocityFactor) * 0.1;
-      } else {
-        // Normal phase friction
-        dynamicFriction =
-          baseFriction + (1 - baseFriction) * (1 - velocityFactor) * 0.3;
-      }
-
-      // Apply friction to gradually slow down
-      currentVelocity *= dynamicFriction;
-
-      // Add slight randomness to make it feel more organic (only in normal phase)
-      if (!inFinalPhase && frameCount % 3 === 0) {
-        currentVelocity *= getRandomRange(0.99, 1.01);
-      }
-
-      // Stop when velocity is very low
-      if (currentVelocity < minVelocity) {
-        // Smoothly approach the final position instead of snapping
-        const finalAngle = totalTargetAngle;
-        const angleDiff = (finalAngle - totalRotation) % (2 * Math.PI);
-        const adjustedAngleDiff = angleDiff < 0 ? angleDiff + 2 * Math.PI : angleDiff;
-        
-        // If we're very close, just snap to avoid infinite micro-movements
-        if (adjustedAngleDiff < 0.01) {
-          // Ensure we snap to the exact target angle
-          startAngle = finalAngle;
-          totalRotation = finalAngle; // Keep totalRotation in sync
-          drawWheel();
-          isSpinning = false;
-
-          // Small delay to show the final position before revealing result
-          setTimeout(() => {
-            getResult();
-            resultDiv.style.visibility = "visible";
-            document.querySelector("body").classList.add("afterResult");
-            doneBtn.addEventListener("click", () => {
-              resultDiv.style.visibility = "hidden";
-              document.querySelector("body").classList.remove("afterResult");
-            });
-          }, 200);
-          return;
-        } else {
-          // Continue with very slow movement to the exact target
-          currentVelocity = Math.min(adjustedAngleDiff * 0.05, 0.01);
-        }
-      }
-
-      // Add current velocity to rotation
-      totalRotation += currentVelocity;
-      startAngle = totalRotation;
 
       drawWheel();
       requestAnimationFrame(spin);
