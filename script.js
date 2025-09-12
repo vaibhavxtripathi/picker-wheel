@@ -242,22 +242,34 @@ spinWheelButton.addEventListener("click", () => {
 
     // Stop when velocity is very low
     if (currentVelocity < minVelocity) {
-      // Snap to the exact target angle for precise landing
-      startAngle = totalTargetAngle;
-      drawWheel();
-      isSpinning = false;
+      // Smoothly approach the final position instead of snapping
+      const finalAngle = totalTargetAngle;
+      const angleDiff = (finalAngle - totalRotation) % (2 * Math.PI);
+      const adjustedAngleDiff = angleDiff < 0 ? angleDiff + 2 * Math.PI : angleDiff;
+      
+        // If we're very close, just snap to avoid infinite micro-movements
+        if (adjustedAngleDiff < 0.01) {
+          // Ensure we snap to the exact target angle
+          startAngle = finalAngle;
+          totalRotation = finalAngle; // Keep totalRotation in sync
+          drawWheel();
+          isSpinning = false;
 
-      // Small delay to show the final position before revealing result
-      setTimeout(() => {
-        getResult();
-        resultDiv.style.visibility = "visible";
-        document.querySelector("body").classList.add("afterResult");
-        doneBtn.addEventListener("click", () => {
-          resultDiv.style.visibility = "hidden";
-          document.querySelector("body").classList.remove("afterResult");
-        });
-      }, 200);
-      return;
+          // Small delay to show the final position before revealing result
+          setTimeout(() => {
+            getResult();
+            resultDiv.style.visibility = "visible";
+            document.querySelector("body").classList.add("afterResult");
+            doneBtn.addEventListener("click", () => {
+              resultDiv.style.visibility = "hidden";
+              document.querySelector("body").classList.remove("afterResult");
+            });
+          }, 200);
+          return;
+      } else {
+        // Continue with very slow movement to the exact target
+        currentVelocity = Math.min(adjustedAngleDiff * 0.05, 0.01);
+      }
     }
 
     // Add current velocity to rotation
@@ -342,22 +354,34 @@ document.body.addEventListener("keypress", (event) => {
 
       // Stop when velocity is very low
       if (currentVelocity < minVelocity) {
-        // Snap to the exact target angle for precise landing
-        startAngle = totalTargetAngle;
-        drawWheel();
-        isSpinning = false;
+        // Smoothly approach the final position instead of snapping
+        const finalAngle = totalTargetAngle;
+        const angleDiff = (finalAngle - totalRotation) % (2 * Math.PI);
+        const adjustedAngleDiff = angleDiff < 0 ? angleDiff + 2 * Math.PI : angleDiff;
+        
+        // If we're very close, just snap to avoid infinite micro-movements
+        if (adjustedAngleDiff < 0.01) {
+          // Ensure we snap to the exact target angle
+          startAngle = finalAngle;
+          totalRotation = finalAngle; // Keep totalRotation in sync
+          drawWheel();
+          isSpinning = false;
 
-        // Small delay to show the final position before revealing result
-        setTimeout(() => {
-          getResult();
-          resultDiv.style.visibility = "visible";
-          document.querySelector("body").classList.add("afterResult");
-          doneBtn.addEventListener("click", () => {
-            resultDiv.style.visibility = "hidden";
-            document.querySelector("body").classList.remove("afterResult");
-          });
-        }, 200);
-        return;
+          // Small delay to show the final position before revealing result
+          setTimeout(() => {
+            getResult();
+            resultDiv.style.visibility = "visible";
+            document.querySelector("body").classList.add("afterResult");
+            doneBtn.addEventListener("click", () => {
+              resultDiv.style.visibility = "hidden";
+              document.querySelector("body").classList.remove("afterResult");
+            });
+          }, 200);
+          return;
+        } else {
+          // Continue with very slow movement to the exact target
+          currentVelocity = Math.min(adjustedAngleDiff * 0.05, 0.01);
+        }
       }
 
       // Add current velocity to rotation
