@@ -180,75 +180,68 @@ spinWheelButton.addEventListener("click", () => {
 
   isSpinning = true;
 
-  // Much larger random spin angle (5-15 full rotations + random offset)
+  // Calculate target angle for precise landing
+  const arcSize = (2 * Math.PI) / segments.length;
+  const targetSegmentIndex = Math.floor(getSecureRandom() * segments.length);
+  const targetAngle = targetSegmentIndex * arcSize;
+  
+  // Add multiple full rotations (5-15) plus the target angle
   const baseRotations = getRandomRange(5, 15);
-  const randomOffset = getRandomRange(0, 360);
-  spinAngle = baseRotations * 360 + randomOffset;
-
-  // Random spin duration between 2-5 seconds
-  const spinDuration = getRandomRange(2000, 5000);
-
-  // Random easing function selection
-  const easingTypes = ["easeOut", "easeInOut", "bounce", "elastic"];
-  const selectedEasing =
-    easingTypes[Math.floor(getSecureRandom() * easingTypes.length)];
-
-  // Add micro-randomness to make each spin feel unique
-  const microRandomness = getRandomRange(0.8, 1.2);
-
+  const totalTargetAngle = (baseRotations * 2 * Math.PI) + targetAngle;
+  
+  // Physics-based parameters
+  const initialVelocity = getRandomRange(8, 15); // Initial angular velocity (radians/frame)
+  const baseFriction = getRandomRange(0.95, 0.98); // Base friction coefficient
+  const minVelocity = 0.01; // Minimum velocity before stopping
+  
+  let currentVelocity = initialVelocity;
+  let totalRotation = 0;
+  let frameCount = 0;
   const startTime = Date.now();
 
   const spin = () => {
     const elapsed = Date.now() - startTime;
-    const progress = elapsed / spinDuration;
-
-    if (progress < 1) {
-      let easingProgress;
-
-      // Apply different easing functions for variety
-      switch (selectedEasing) {
-        case "easeOut":
-          easingProgress = 1 - Math.pow(1 - progress, 3);
-          break;
-        case "easeInOut":
-          easingProgress =
-            progress < 0.5
-              ? 4 * progress * progress * progress
-              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-          break;
-        case "bounce":
-          easingProgress =
-            progress < 0.5
-              ? 4 * progress * progress
-              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-          break;
-        case "elastic":
-          easingProgress =
-            progress === 0
-              ? 0
-              : progress === 1
-              ? 1
-              : Math.pow(2, -10 * progress) *
-                  Math.sin(((progress * 10 - 0.75) * (2 * Math.PI)) / 3) +
-                1;
-          break;
-        default:
-          easingProgress = 1 - Math.pow(1 - progress, 2);
-      }
-
-      startAngle += (spinAngle * easingProgress) / spinDuration;
-      drawWheel();
-      requestAnimationFrame(spin);
-    } else {
-      isSpinning = false;
-      getResult();
-      resultDiv.style.visibility = "visible";
-      document.querySelector("body").classList.add("afterResult");
-      doneBtn.addEventListener("click", () => {
-        resultDiv.style.visibility = "hidden";
-        document.querySelector("body").classList.remove("afterResult");
-      });
+    frameCount++;
+    
+    // Variable friction - increases as wheel slows down (more realistic)
+    const velocityFactor = Math.max(0.1, currentVelocity / initialVelocity);
+    const dynamicFriction = baseFriction + (1 - baseFriction) * (1 - velocityFactor) * 0.3;
+    
+    // Apply friction to gradually slow down
+    currentVelocity *= dynamicFriction;
+    
+    // Add slight randomness to make it feel more organic
+    if (frameCount % 3 === 0) {
+      currentVelocity *= getRandomRange(0.99, 1.01);
     }
+    
+    // Stop when velocity is too low
+    if (currentVelocity < minVelocity) {
+      // Snap to the exact target angle for precise landing
+      // Ensure the pointer lands exactly on the segment boundary
+      startAngle = totalTargetAngle;
+      drawWheel();
+      isSpinning = false;
+      
+      // Small delay to show the final position before revealing result
+      setTimeout(() => {
+        getResult();
+        resultDiv.style.visibility = "visible";
+        document.querySelector("body").classList.add("afterResult");
+        doneBtn.addEventListener("click", () => {
+          resultDiv.style.visibility = "hidden";
+          document.querySelector("body").classList.remove("afterResult");
+        });
+      }, 100);
+      return;
+    }
+    
+    // Add current velocity to rotation
+    totalRotation += currentVelocity;
+    startAngle = totalRotation;
+    
+    drawWheel();
+    requestAnimationFrame(spin);
   };
 
   spin();
@@ -262,76 +255,68 @@ document.body.addEventListener("keypress", (event) => {
 
     isSpinning = true;
 
-    // Much larger random spin angle (5-15 full rotations + random offset)
+    // Calculate target angle for precise landing
+    const arcSize = (2 * Math.PI) / segments.length;
+    const targetSegmentIndex = Math.floor(getSecureRandom() * segments.length);
+    const targetAngle = targetSegmentIndex * arcSize;
+    
+    // Add multiple full rotations (5-15) plus the target angle
     const baseRotations = getRandomRange(5, 15);
-    const randomOffset = getRandomRange(0, 360);
-    spinAngle = baseRotations * 360 + randomOffset;
-
-    // Random spin duration between 2-5 seconds
-    const spinDuration = getRandomRange(2000, 5000);
-
-    // Random easing function selection
-    const easingTypes = ["easeOut", "easeInOut", "bounce", "elastic"];
-    const selectedEasing =
-      easingTypes[Math.floor(getSecureRandom() * easingTypes.length)];
-
-    // Add micro-randomness to make each spin feel unique
-    const microRandomness = getRandomRange(0.8, 1.2);
-
+    const totalTargetAngle = (baseRotations * 2 * Math.PI) + targetAngle;
+    
+    // Physics-based parameters
+    const initialVelocity = getRandomRange(8, 15); // Initial angular velocity (radians/frame)
+    const baseFriction = getRandomRange(0.95, 0.98); // Base friction coefficient
+    const minVelocity = 0.01; // Minimum velocity before stopping
+    
+    let currentVelocity = initialVelocity;
+    let totalRotation = 0;
+    let frameCount = 0;
     const startTime = Date.now();
 
     const spin = () => {
       const elapsed = Date.now() - startTime;
-      const progress = elapsed / spinDuration;
-
-      if (progress < 1) {
-        let easingProgress;
-
-        // Apply different easing functions for variety
-        switch (selectedEasing) {
-          case "easeOut":
-            easingProgress = 1 - Math.pow(1 - progress, 3);
-            break;
-          case "easeInOut":
-            easingProgress =
-              progress < 0.5
-                ? 4 * progress * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-            break;
-          case "bounce":
-            easingProgress =
-              progress < 0.5
-                ? 4 * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-            break;
-          case "elastic":
-            easingProgress =
-              progress === 0
-                ? 0
-                : progress === 1
-                ? 1
-                : Math.pow(2, -10 * progress) *
-                    Math.sin(((progress * 10 - 0.75) * (2 * Math.PI)) / 3) +
-                  1;
-            break;
-          default:
-            easingProgress = 1 - Math.pow(1 - progress, 2);
-        }
-
-        startAngle +=
-          (spinAngle * easingProgress * microRandomness) / spinDuration;
-        drawWheel();
-        requestAnimationFrame(spin);
-      } else {
-        isSpinning = false;
-        getResult();
-        resultDiv.style.visibility = "visible";
-        document.querySelector("body").classList.add("afterResult");
-        doneBtn.addEventListener("click", () => {
-          resultDiv.style.visibility = "hidden";
-          document.querySelector("body").classList.remove("afterResult");
-        });
+      frameCount++;
+      
+      // Variable friction - increases as wheel slows down (more realistic)
+      const velocityFactor = Math.max(0.1, currentVelocity / initialVelocity);
+      const dynamicFriction = baseFriction + (1 - baseFriction) * (1 - velocityFactor) * 0.3;
+      
+      // Apply friction to gradually slow down
+      currentVelocity *= dynamicFriction;
+      
+      // Add slight randomness to make it feel more organic
+      if (frameCount % 3 === 0) {
+        currentVelocity *= getRandomRange(0.99, 1.01);
       }
+      
+      // Stop when velocity is too low
+      if (currentVelocity < minVelocity) {
+        // Snap to the exact target angle for precise landing
+        // Ensure the pointer lands exactly on the segment boundary
+        startAngle = totalTargetAngle;
+        drawWheel();
+        isSpinning = false;
+        
+        // Small delay to show the final position before revealing result
+        setTimeout(() => {
+          getResult();
+          resultDiv.style.visibility = "visible";
+          document.querySelector("body").classList.add("afterResult");
+          doneBtn.addEventListener("click", () => {
+            resultDiv.style.visibility = "hidden";
+            document.querySelector("body").classList.remove("afterResult");
+          });
+        }, 100);
+        return;
+      }
+      
+      // Add current velocity to rotation
+      totalRotation += currentVelocity;
+      startAngle = totalRotation;
+      
+      drawWheel();
+      requestAnimationFrame(spin);
     };
 
     spin();
